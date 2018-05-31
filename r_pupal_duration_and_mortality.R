@@ -2,13 +2,13 @@
 # sim.start.time <- Sys.time()
 
 # Set working directory
-setwd(getwd())
+#setwd(getwd())
 
 # === Load all necessary packages
 library(tidyverse)
 
 # Read in files
-T_bar <- readxl::read_xlsx("Tbar 1 Jan 92 to 30 Jun 93.xlsx", col_names = TRUE)
+T_bar <- readxl::read_xlsx("data_tbar_92_93_JH.xlsx", col_names = TRUE)
 colnames(T_bar) <- c("Date","TempScreen")
 
 # Calculate Temperature at Site of Pupal deposit
@@ -58,7 +58,7 @@ Temp.Duration.Function <- function(temp.data, date.data, row.position, # data
   counter = 0
   temp.total = 0
   start.date <- date.data[row.position]
-  # print(start.date)
+
   PupalDuration <- NA
   MeanTemperature <- NA
 
@@ -66,31 +66,19 @@ Temp.Duration.Function <- function(temp.data, date.data, row.position, # data
   {
     temp <- temp.data[j]
     
-    # print(temp)
-    if(pupae.duration < 1)
+    if(pupae.duration < 1) 
     {
       temp.total <- temp.total + temp
       counter <- counter + 1
-      # Determine r(T) for each temperature of the day
-      rate_T <- k / (1 + exp( a + b * temp))
-      # == to be added == function instead to read in VARIATIONS IN TEMPERATURE
-      # rate_T <- k / (1 + exp( a + b * TempFunc(T_bar$Temperature[j])))
-      
+      rate_T <- k / (1 + exp( a + b * temp)) # Determine r(T) for each temperature of the day
+
       pupae.duration <- pupae.duration + rate_T  
     }else{
-      # print(pupae.duration)
-
-      # print(counter)
-      # print(start.date)
-      # print(date.data[j])
       temp.total <- temp.total - temp.data[j-1]
-      # print(temp.total)
       # calculate the total number of days for the pupal duration
       PupalDuration <- date.data[j] - start.date - 1
-      # print(PupalDuration)
       # calculate the mean temperature over the pupal duration
       MeanTemperature <- temp.total/(counter - 1)
-      # print(MeanTemperature)
       break
     }
   }
