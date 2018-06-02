@@ -53,7 +53,7 @@ tsetse_mod <- function(tt,yy,parms) with(c(parms,as.list(yy)), {
   
   temp <-  temps[tt]                             # the temperature data is read in by another script. This takes the temperature for the time point in the model (tt)
   
-  pup <- 1/(pup.a + pup.b*exp(pup.c*(temp-pup.t1)))
+  pup <- (1/(pup.a + pup.b*exp(pup.c*(temp-pup.t1))))/nboxes
   
   inst.mort.pup <- mort_func(k1=mu.p.k1                 # calculate pupal mortality rate at the given temperature
                              ,k2=mu.p.k2
@@ -183,7 +183,7 @@ test <- simPop(parms=tsetse_params(
   ,mu.p.k4=pk4
   ,mu.a.k1=0.02
   ,mu.a.k2=0.05
-  ,mud.p=0.0003
+  ,mud.p=0.000003
 ))
 #*************
 
