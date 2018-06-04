@@ -16,8 +16,6 @@ length(temps)
 
 times <- seq(from = 1, to = length(temps),by=1)        # time steps to solve model at (in days)
 
-
-
 tsetse_params <- function(   larv = 1/10          ## rate larvae are produced (days)
                              , pup.a = 17.94          ## rate pupae emerge as adults (days) - if not temperature dependent
                              , pup.b = 82.3
@@ -36,8 +34,6 @@ tsetse_params <- function(   larv = 1/10          ## rate larvae are produced (d
 )
   return(as.list(environment()))
 
-
-
 # Initial conditions. A vector containing the numbers of starting pupae P and adults A.
 initial <- c( P=tsetse_params()$pupae.zero/tsetse_params()$nboxes 
               ,rep(tsetse_params()$pupae.zero/tsetse_params()$nboxes,tsetse_params()$nboxes-1)
@@ -51,19 +47,38 @@ initial <- c( P=tsetse_params()$pupae.zero/tsetse_params()$nboxes
 #********************Population dynamics model***********************************
 tsetse_mod <- function(tt,yy,parms) with(c(parms,as.list(yy)), {
   
-  temp <-  temps[tt]                             # the temperature data is read in by another script. This takes the temperature for the time point in the model (tt)
+  temp <-  temps[tt]                                          # the temperature data is read in by another script. This takes the temperature for the time point in the model (tt)
   
-  pup <- (1/(pup.a + pup.b*exp(pup.c*(temp-pup.t1))))/nboxes
+  pup <- (1/(pup.a + pup.b*exp(pup.c*(temp-pup.t1))))/nboxes  # pupal development rate for day tt
   
-  inst.mort.pup <- mort_func(k1=mu.p.k1                 # calculate pupal mortality rate at the given temperature
+  # calculate how far back to go to average temperature for proportion of pupae surviving
+  store.days <- 1                                             # store the total pupal duration
+  day <- tt                                                   # time t in the model
+  cum.rate <- pup.a + pup.b*exp(pup.c*(temp-pup.t1))          # start off with the rate of pupal development for that day
+  temperature <- numeric(0)                                   # empty vector to store temperatures
+  temperature[1] <- temp                                      # first value is temperature at day tt
+  while (cum.rate < 1) {
+    store.days <- store.days + 1                              # update store.days
+    day <- day - 1                                            # look at previous day
+    if ( day <= 0 ) {                                         # if before model start assign to 25 - running model for a year before the actual data means this doesn't matter
+      day.temp <- 25
+    }else{
+      day.temp <- temps[day]                                  # otherwise set next temp to previous days temp
+      }                    
+    temperature[store.days] <- day.temp                       # store in vector of temperatures
+    cum.rate <- cum.rate + (pup.a + pup.b*exp(pup.c*(day.temp-pup.t1)))   # increase development
+  }
+  mean.temp <- mean(temperature)                              # now calculate mean for that period for input into pupal survival as function of temperature
+
+  inst.mort.pup <- mort_func(k1=mu.p.k1                       # calculate pupal mortality rate at the given temperature
                              ,k2=mu.p.k2
                              ,k3=mu.p.k3
                              ,k4=mu.p.k4
-                             ,temp=temp)
+                             ,temp=mean.temp)                 # note using the above mean.temp here
   
-  prob.surv.pup <- exp(-inst.mort.pup)                  # convert to a probability
+  prob.surv.pup <- exp(-inst.mort.pup)                        # convert to a probability
   
-  if (temp > 24){                                       # calculate adult temperature-dependent mortality
+  if (temp > 24){                                             # calculate adult temperature-dependent mortality
     mu.at <- mu.a.k1*exp(mu.a.k2*(temp-24))
   }else{
     mu.at <- mu.a.k1
@@ -140,7 +155,6 @@ simPop <- function(init=initial, tseq = times, modFunction=tsetse_mod      # fun
 # #******************************************************************
 # 
 # 
-# 
 # #*****************confidence intervals for parameter estimates*********
 # fisherInfMatrix <- solve(optim.vals$hessian) ## invert the Hessian, to estimate the covar-var matrix of parameter estimates
 # fisherInfMatrix
@@ -181,9 +195,9 @@ simPop <- function(init=initial, tseq = times, modFunction=tsetse_mod      # fun
 test <- simPop(parms=tsetse_params(
   mu.p.k2=pk2
   ,mu.p.k4=pk4
-  ,mu.a.k1=0.02
+  ,mu.a.k1=0.03
   ,mu.a.k2=0.05
-  ,mud.p=0.000003
+  ,mud.p=0.0000003
 ))
 #*************
 
