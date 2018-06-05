@@ -1,13 +1,16 @@
 require(bbmle)  # required packages
 require(deSolve)
 library(zoo)
+library(beepr)
 
 #****************Required R scripts*************
 source("r_1_data_bioassay.R")                   # count and climate data      
 
-source("r_3_subfuncs_pupal_mortality.R")        # initial estimates for pupal temperature-dependent mortality
+source("r_2_subfuncs_adult_mortality.R")        # initial estimates for adult temperature-dependent mortality from fitting to the mark-release recapture data
 
-source("r_2_fit_funcs.R")                       # likelihood function
+source("r_2_subfuncs_pupal_mortality.R")        # initial estimates for pupal temperature-dependent mortality from fitting to the laboratory data
+
+source("r_3_fit_funcs.R")                       # likelihood function
 #***********************************************
 
 #********************Model parameters and conditions*************************************
@@ -16,21 +19,21 @@ length(temps)
 
 times <- seq(from = 1, to = length(temps),by=1)        # time steps to solve model at (in days)
 
-tsetse_params <- function(   larv = 1/10          ## rate larvae are produced (days)
-                             , pup.a = 17.94          ## rate pupae emerge as adults (days) - if not temperature dependent
+tsetse_params <- function(   larv = 1/10            ## rate larvae are produced (days)
+                             , pup.a = 17.94        ## rate pupae emerge as adults (days) - if not temperature dependent
                              , pup.b = 82.3
                              , pup.c = -0.253
                              , pup.t1 = 16
                              , nboxes=3
-                             , mud.p = 0.0000     ## pupal density-dependent mortality
-                             , mu.p.k1 = exp(2.03)     ## parameters for pupal temperature-dependent mortality
+                             , mud.p = 0.0000       ## pupal density-dependent mortality
+                             , mu.p.k1 = pk1        ## parameters for pupal temperature-dependent mortality
                              , mu.p.k2 = pk2
-                             , mu.p.k3 = exp(-7.83)
+                             , mu.p.k3 = pk3
                              , mu.p.k4 = pk4
-                             , mu.a.k1 = 0      ## parameter 1 adult temperature-dependent mortality
-                             , mu.a.k2 = 0        ## parameter 2 adult temperature-dependent mortality
-                             , adults.zero = 100 ## numbers of adults at start
-                             , pupae.zero = 100 ## numbers of pupae at start
+                             , mu.a.k1 = mu.a.k1.fit          ## parameter 1 adult temperature-dependent mortality
+                             , mu.a.k2 = mu.a.k2.fit          ## parameter 2 adult temperature-dependent mortality
+                             , adults.zero = 100    ## numbers of adults at start
+                             , pupae.zero = 100     ## numbers of pupae at start
 )
   return(as.list(environment()))
 
@@ -42,19 +45,13 @@ initial <- c( P=tsetse_params()$pupae.zero/tsetse_params()$nboxes
 
 #******************************************************************************
 
-
-
-#********************Population dynamics model***********************************
-tsetse_mod <- function(tt,yy,parms) with(c(parms,as.list(yy)), {
-  
-  temp <-  temps[tt]                                          # the temperature data is read in by another script. This takes the temperature for the time point in the model (tt)
-  
-  pup <- (1/(pup.a + pup.b*exp(pup.c*(temp-pup.t1))))/nboxes  # pupal development rate for day tt
-  
-  # calculate how far back to go to average temperature for proportion of pupae surviving
+#***************Calcluate look-up table for pupal probability of survival****
+# calculate how far back to go to average temperature for proportion of pupae surviving
+mean.temp.pup.period <- sapply(times,function(x){
+  day <- x                                                    # time t in the model
+  temp <- temps[x]
   store.days <- 1                                             # store the total pupal duration
-  day <- tt                                                   # time t in the model
-  cum.rate <- pup.a + pup.b*exp(pup.c*(temp-pup.t1))          # start off with the rate of pupal development for that day
+  cum.rate <- tsetse_params()$pup.a + tsetse_params()$pup.b*exp(tsetse_params()$pup.c*(temp-tsetse_params()$pup.t1))  # start off with the rate of pupal development for that day
   temperature <- numeric(0)                                   # empty vector to store temperatures
   temperature[1] <- temp                                      # first value is temperature at day tt
   while (cum.rate < 1) {
@@ -64,11 +61,23 @@ tsetse_mod <- function(tt,yy,parms) with(c(parms,as.list(yy)), {
       day.temp <- 25
     }else{
       day.temp <- temps[day]                                  # otherwise set next temp to previous days temp
-      }                    
+    }                    
     temperature[store.days] <- day.temp                       # store in vector of temperatures
     cum.rate <- cum.rate + (pup.a + pup.b*exp(pup.c*(day.temp-pup.t1)))   # increase development
   }
   mean.temp <- mean(temperature)                              # now calculate mean for that period for input into pupal survival as function of temperature
+  return(mean.temp)
+})
+#***********************************************************************
+
+#********************Population dynamics model***********************************
+tsetse_mod <- function(tt,yy,parms) with(c(parms,as.list(yy)), {
+  
+  temp <-  temps[tt]                                          # the temperature data is read in by another script. This takes the temperature for the time point in the model (tt)
+  
+  pup <- (1/(pup.a + pup.b*exp(pup.c*(temp-pup.t1))))/nboxes  # pupal development rate for day tt
+  
+  mean.temp <- mean.temp.pup.period[tt]                       # now calculate mean for that period for input into pupal survival as function of temperature
 
   inst.mort.pup <- mort_func(k1=mu.p.k1                       # calculate pupal mortality rate at the given temperature
                              ,k2=mu.p.k2
@@ -101,7 +110,7 @@ tsetse_mod <- function(tt,yy,parms) with(c(parms,as.list(yy)), {
 })
 #*******************************************************
 
-#**************SIMULATE***************************************
+#**************FUNCTION TO SIMULATE***************************************
 simPop <- function(init=initial, tseq = times, modFunction=tsetse_mod      # function which runs the model
                    , parms = tsetse_params()) { 
   simDat <- as.data.frame(lsoda(init, tseq, modFunction, parms=parms))
@@ -109,104 +118,103 @@ simPop <- function(init=initial, tseq = times, modFunction=tsetse_mod      # fun
 }
 ########################################################
 
+#*********test run and plot**************
+start_time <- Sys.time()
+#*****TEST**************
+test <- simPop(parms=tsetse_params(mud.p=0.0000005))
+#**********************
+end_time <- Sys.time()
+end_time - start_time
+beep(sound=2)
+
+plot(b.temps$Date
+     ,test$A
+     ,bty="n"
+     ,type="l"
+     ,xlab="Date"
+     ,ylab="Numbers of adult tsetse")
+
 # # #************initial parameters**********************
-# #**********************************************
-# init.pars <- c(
-#   log_mu.p.k2=log(2.212627e-01)
-#   ,log_mu.p.k4=log(1.091462e+00)
-#   ,log_mu.a.k1=log(3.968048e-02)
-#   ,log_mu.a.k2=log(6.405333e-02)
-#   ,log_mud.p=log(6.726220e-06)
-# )
+# #**********First just fit density-dependent pupal mortality***************
+ init.pars <- c(
+    log_mud.p=log(0.0000005)
+ )
 # 
 # #**************Optimise*******************************************
-# trace <- 3
-# optim.vals <- optim(par = init.pars
-#                     , objFXN
-#                     , fixed.params = tsetse_params()
-#                     , dat = temps.count
-#                     , control = list(trace = trace, maxit = 200)
-#                     , method = "SANN")
-# 
-# 
-# 
-# exp(optim.vals$par) # 
-# optim.vals <- optim(par = optim.vals$par
-#                     , objFXN
-#                     , fixed.params = tsetse_params()
-#                     , dat = temps.count
-#                     , control = list(trace = trace, maxit = 200)
-#                     , method = "SANN")
-# exp(optim.vals$par) # 
+ trace <- 3
+ start_time <- Sys.time()
+ optim.vals <- optim(par = init.pars
+                     , objFXN
+                     , fixed.params = tsetse_params()
+                     , dat = count.times
+                     , control = list(trace = trace, maxit = 200)
+                     , method = "SANN")
+ exp(optim.vals$par) 
+ end_time <- Sys.time()
+ end_time - start_time
+ beep(sound=2)
+ 
+ optim.vals <- optim(par = optim.vals$par
+                     , objFXN
+                     , fixed.params = tsetse_params()
+                     , dat = count.times
+                     , control = list(trace = trace, maxit = 200)
+                     , method = "SANN")
+ exp(optim.vals$par) # 
 # 
 # 
 # # want to then feed output from SANN to Nelder-Mead
-# optim.vals <- optim(par = init.pars #optim.vals$par#optim.vals$par
-#                     , objFXN
-#                     , fixed.params = tsetse_params()
-#                     , dat = temps.count
-#                     , control = list(trace = trace, maxit = 1000, reltol = 10^-7)
-#                     , method = "Nelder-Mead" # 
-#                     , hessian = T)
-# optim.vals # convergence 0 means algorithm converged
-# 
-# MLEfits <- optim.vals$par 
-# exp(MLEfits)
+ start_time <- Sys.time()
+ optim.vals <- optim(par = init.pars #optim.vals$par#optim.vals$par
+                     , objFXN
+                     , fixed.params = tsetse_params()
+                     , dat = count.times
+                     , control = list(trace = trace, maxit = 1000, reltol = 10^-7)
+                     , method = "Nelder-Mead" # 
+                     , hessian = T)
+ optim.vals # convergence 0 means algorithm converged
+ end_time <- Sys.time()
+ end_time - start_time
+ beep(sound=2)
+ MLEfits <- optim.vals$par 
+ exp(MLEfits)
 # #******************************************************************
-# 
-# 
+
 # #*****************confidence intervals for parameter estimates*********
-# fisherInfMatrix <- solve(optim.vals$hessian) ## invert the Hessian, to estimate the covar-var matrix of parameter estimates
-# fisherInfMatrix
+ fisherInfMatrix <- solve(optim.vals$hessian) ## invert the Hessian, to estimate the covar-var matrix of parameter estimates
+ fisherInfMatrix
 # 
 # # Finds the critical z value
-# conf.level <- 0.95
-# crit <- qnorm((1 + conf.level)/2)
+ conf.level <- 0.95
+ crit <- qnorm((1 + conf.level)/2)
 # 
-# ci <- optim.vals$par[1] + c(-1, 1) * crit * sqrt(abs(fisherInfMatrix[1, 1]))
-# exp(ci)
-# ci <- optim.vals$par[2] + c(-1, 1) * crit * sqrt(abs(fisherInfMatrix[2, 2]))
-# exp(ci)
-# ci <- optim.vals$par[3] + c(-1, 1) * crit * sqrt(abs(fisherInfMatrix[3,3]))
-# exp(ci)
-# ci <- optim.vals$par[4] + c(-1, 1) * crit * sqrt(abs(fisherInfMatrix[4, 4]))
-# exp(ci)
+ ci <- optim.vals$par[1] + c(-1, 1) * crit * sqrt(abs(fisherInfMatrix[1, 1]))
+ exp(ci)
+ ci <- optim.vals$par[2] + c(-1, 1) * crit * sqrt(abs(fisherInfMatrix[2, 2]))
+ exp(ci)
+ ci <- optim.vals$par[3] + c(-1, 1) * crit * sqrt(abs(fisherInfMatrix[3,3]))
+ exp(ci)
+ ci <- optim.vals$par[4] + c(-1, 1) * crit * sqrt(abs(fisherInfMatrix[4, 4]))
+ exp(ci)
 # 
-# ci <- optim.vals$par[5] + c(-1, 1) * crit * sqrt(abs(fisherInfMatrix[5, 5]))
-# exp(ci)
+ ci <- optim.vals$par[5] + c(-1, 1) * crit * sqrt(abs(fisherInfMatrix[5, 5]))
+ exp(ci)
 # 
 # #**********************************************************************
 # 
 # 
 # # #********************************************************************
-# test <- simPop(parms=tsetse_params(
-#                                    mu.p.k2=exp(MLEfits[1])
-#                                    ,mu.p.k4=exp(MLEfits[2])
-#                                    ,mu.a.k1=exp(MLEfits[3])
-#                                    ,mu.a.k2=exp(MLEfits[4])
-#                                    ,mud.p=exp(MLEfits[5])
-# ))
+ test <- simPop(parms=tsetse_params(
+                                    mu.p.k2=exp(MLEfits[1])
+                                    ,mu.p.k4=exp(MLEfits[2])
+                                    ,mu.a.k1=exp(MLEfits[3])
+                                    ,mu.a.k2=exp(MLEfits[4])
+                                    ,mud.p=exp(MLEfits[5])
+ ))
 # 
 # 
 # # #********************************************************************
 
-
-#*****TEST**************
-test <- simPop(parms=tsetse_params(
-  mu.p.k2=pk2
-  ,mu.p.k4=pk4
-  ,mu.a.k1=0.03
-  ,mu.a.k2=0.05
-  ,mud.p=0.0000003
-))
-#*************
-
-plot(b.temps$Date
-  ,test$A
-  ,bty="n"
-  ,type="l"
-  ,xlab="Date"
-  ,ylab="Numbers of adult tsetse")
 
 #****************Plots************************************************
 #tiff("Fig_2.tiff", height = 3, width = 5, units = 'in', compression="lzw", res=400)
