@@ -1,0 +1,20 @@
+{
+    "collab_server" : "",
+    "contents" : "# This script:\n# 1 reads in the tsetse count and temperature data\n# 2 formats the time columns and summarises the temperature data\n# 3 binds the count data and temperature data together \n\nlibrary(\"zoo\")     # required packages\nlibrary(\"plyr\")\n\n#***********read in data**********************************\nb.counts <- read.csv(\"data_bioassay_counts.csv\",header=T) # bioassay count data\n\nb.temps <- read.csv(\"data_bioassay_temps.csv\",header=T)   # temperature data\n#********************************************************\n\nb.temps$Date <- as.Date(b.temps$Date,\"%d/%m/%Y\")          # tell R this is a date\n\n#***********add column of year-month format*******\nb.counts$Mon.yr <- as.yearmon(b.counts$Mon.yr,\"%d/%m/%Y\") \nb.temps$yearmon <- as.yearmon(b.temps$Date,\"%Y/%m/%d\")    \nb.temps$times <- c(1:length(b.temps$MeanC))\n#***************************************\nextra <- data.frame(b.temps[grep(\"1960\",b.temps$yearmon),])\n\nb.temps <- rbind.data.frame(extra,extra,extra,extra,extra,b.temps)\n#b.temps <- b.temps[b.temps$yearmon %in% b.counts$Mon.yr,]\nwhich(b.temps$times %in% 1)\nb.temps[1831:22946,]\n\ncount.times <- ddply(b.temps[1831:22946,],.(yearmon),summarise,median.times=round(median(times),0))   # find time point in middle of each month\ncount.times <- count.times[count.times$yearmon %in% b.counts$Mon.yr,]\ncount.times$counts <- b.counts$Mean\ncount.times <- count.times[!count.times$counts %in% NA,]\ncount.times\n#***************************************************************",
+    "created" : 1528228337368.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "723939473",
+    "id" : "99207947",
+    "lastKnownWriteTime" : 1528232990,
+    "last_content_update" : 1528232990300,
+    "path" : "~/GitHub/tsetse_climate_change/r_1_data_bioassay.R",
+    "project_path" : "r_1_data_bioassay.R",
+    "properties" : {
+    },
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

@@ -1,0 +1,20 @@
+{
+    "collab_server" : "",
+    "contents" : "$par\nlog_mu.p.k2  log_mu.p.k4  log_mu.a.k1  log_mu.a.k2    log_mud.p \nexp(c(-1.46332273  , 0.02769353 , -3.22892816 , -2.67557430, -11.88129195)) \n\n$value\n[1] 838.4822\n\n$counts\nfunction gradient \n192       NA \n\n$convergence\n[1] 0\n\n$message\nNULL\n\n$hessian\nlog_mu.p.k2 log_mu.p.k4 log_mu.a.k1 log_mu.a.k2 log_mud.p\nlog_mu.p.k2   2693140.3  -1743719.8  -2399243.1  -2048202.1 -713311.1\nlog_mu.p.k4  -1743719.8   2863786.2   1930420.1   1080874.4  205174.7\nlog_mu.a.k1  -2399243.1   1930420.1  15485609.3   3872826.6  260156.8\nlog_mu.a.k2  -2048202.1   1080874.4   3872826.6   2734986.1 -220194.8\nlog_mud.p     -713311.1    205174.7    260156.8   -220194.8  763932.0\n\nlog_mu.p.k2  log_mu.p.k4  log_mu.a.k1  log_mu.a.k2    log_mud.p \n2.314659e-01 1.028081e+00 3.959992e-02 6.886727e-02 6.918636e-06 \n\nfisherInfMatrix <- solve(optim.vals$hessian) ## invert the Hessian, to estimate the covar-var matrix of parameter estimates\n> fisherInfMatrix\nlog_mu.p.k2   log_mu.p.k4  log_mu.a.k1   log_mu.a.k2     log_mud.p\nlog_mu.p.k2 -5.555918e-06 -1.466204e-06 7.091558e-07 -5.109487e-06 -6.508229e-06\nlog_mu.p.k4 -1.466204e-06  4.429560e-08 1.792140e-07 -1.520687e-06 -1.880297e-06\nlog_mu.a.k1  7.091558e-07  1.792140e-07 1.419738e-08  5.008182e-07  7.535521e-07\nlog_mu.a.k2 -5.109487e-06 -1.520687e-06 5.008182e-07 -4.027421e-06 -5.693905e-06\nlog_mud.p   -6.508229e-06 -1.880297e-06 7.535521e-07 -5.693905e-06 -6.160775e-06\n> \n  > # Finds the critical z value\n  > conf.level <- 0.95\n> crit <- qnorm((1 + conf.level)/2)\n> \n  > ci <- optim.vals$par[1] + c(-1, 1) * crit * sqrt(abs(fisherInfMatrix[1, 1]))\n> exp(ci)\n[1] 0.2303990 0.2325377\n> ci <- optim.vals$par[2] + c(-1, 1) * crit * sqrt(abs(fisherInfMatrix[2, 2]))\n> exp(ci)\n[1] 1.027657 1.028505\n> ci <- optim.vals$par[3] + c(-1, 1) * crit * sqrt(abs(fisherInfMatrix[3,3]))\n> exp(ci)\n[1] 0.03959067 0.03960917\n> ci <- optim.vals$par[4] + c(-1, 1) * crit * sqrt(abs(fisherInfMatrix[4, 4]))\n> exp(ci)\n[1] 0.06859692 0.06913868\n> \n  > ci <- optim.vals$par[5] + c(-1, 1) * crit * sqrt(abs(fisherInfMatrix[5, 5]))\n> exp(ci)\n[1] 6.885060e-06 6.952376e-06\n> \n  ",
+    "created" : 1528261481179.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "13252198",
+    "id" : "33E0689E",
+    "lastKnownWriteTime" : 1511116479,
+    "last_content_update" : 1511116479,
+    "path" : "C:/Users/Jennifer.Lord/Dropbox/Project_tsetse_pop_dyn/2017_manuscript_analysis/fit.R",
+    "project_path" : null,
+    "properties" : {
+    },
+    "relative_order" : 4,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

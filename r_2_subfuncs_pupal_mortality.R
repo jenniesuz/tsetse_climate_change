@@ -1,166 +1,65 @@
-# This file fits pupal temperature-dependent mortality function
-# using laboratory data available in:
-#Phelps 1973 The effect of temperature on fat consumption during the puparial stages of
+# This file fits pupal temperature-dependent mortality function using laboratory data available in:
+# Phelps 1973 The effect of temperature on fat consumption during the puparial stages of
 # Glossina morsitans morsitans Westw. (Dipt., Clossinidae) under laboratory conditions,
 # and its implication in the field. Bull. Ent. Res. 62, 423-438
-# It then plots Figure 2
+# source("r_2_subfuncs_pupal_duration.R")          # need pupal duration as a function of temperature
 
-library("binom")                                            # required pacakges
-require(bbmle)
-
-# #**************************Data*************************************
-phelps.temp <- c(17,18,20,22,24,25,26,27,28,29,30,31,32)                                 # Vector of temperatures used by Phelps
-
-phelps.mortality <- c(21.9,15.3,10.3,4.9,3.6,5,3.5,10.3,3.8,4,7.2,20.5,45.8)/100         # Proportion of pupae that did not survive to emergence sex unknown
-
-phelps.m.emerge <- c(53,26,27,25,27,25,34,24,14,26,30,48,26)                             # Number of males that emerged
-
-phelps.f.emerge <- c(37,24,25,32,26,32,20,28,12,22,22,49,39)                             # Number of females that emerged
-
-phelps.emerged <- phelps.m.emerge + phelps.f.emerge                                      # Total number that emerged
-
-phelps.number.died <- round(phelps.mortality*phelps.emerged / (1-phelps.mortality),0)    # Estimate number that died
-
-phelps.total <- phelps.emerged + phelps.number.died                                      # Total
-
-phelps.b <- binom.confint(phelps.number.died,phelps.total,methods="exact")               # Confidence intervals
-
-
-#**************Convert probabilities to instantaneous mortality********
-inst.mort <- -log(1-phelps.b$mean)
-inst.lower <- -log(1-phelps.b$lower)
-inst.upper <- -log(1-phelps.b$upper)
-phelps <- cbind.data.frame(temp=phelps.temp,mean=inst.mort,lower=inst.lower,upper=inst.upper)
-#***************************************************************
-
-# #****************Set up plot of the data*******************************
-
-# plot
-p <- ggplot(phelps, aes(x=temp,y=mean)) +
- xlim(low=16, high=35) +
-  geom_pointrange(aes(ymin=lower,ymax=upper,x=temp)) +
-  geom_point(size=2) +
-   ylim(low=0, high=1.2) +
-  labs( y="Proportion of pupae failing to emerge"
-        , x=bquote("Temperature"~"(°C)")) + 
+#Data for Glossina morsitans
+#**************************Data*************************************
+pmDat <- read.csv("data_pupal_mort.csv")
+pmEmerged <- pmDat$m.emerge + pmDat$f.emerge                                 # total number that emerged
+pmDied <- round(pmDat$mortality/100*pmEmerged / (1-pmDat$mortality/100),0)   # estimate number that died
+pmTotal <- pmEmerged + pmDied                                                # total
+#****Convert proportion dead to instantaneous daily mortality********
+pupDur <- 1/pdFunc(temp=pmDat$temp)                  # see r_2_subfuncs_pupal_duration
+pmiDat <- -log(1-(pmDied/pmTotal)) / pupDur          # instantaneous mortality over pupal period/ pupal duration at each temperature
+pmDat$pmi <- pmiDat
+#************************Plot data*********************************
+pmPlot <- ggplot(pmDat, aes(x=temp,y=pmi)) +
+  xlim(low=15, high=33) +
+  geom_point(size=1) +
+  ylim(low=0, high=0.04) +
+  labs( y="Pupal mortality rate (per day)"
+        , x=" " 
+        ,title="b") + 
   theme_set(theme_bw()) +
   theme( panel.border = element_blank()
          ,axis.line = element_line(color = 'black')
-         ,text=element_text(size=12)
-         ,plot.margin=unit(c(0.2,0.2,0.2,0.1), "cm")
-         ,axis.text=element_text(size=12)
+         ,text=element_text(size=6)
+         ,plot.margin=unit(c(0.4,0.2,0.2,0.1), "cm")
+         ,axis.text=element_text(size=6)
   )
-#******************************************************
 
-# #**************Mortality function*******************************
-mort_func <- function(k1,k2,k3,k4,temp){                                 # This function has 4 parameters to be fitted - k1 to k4
-  inst.mort <- k1*exp(-(k2*temp))+k3*exp(k4*(temp-25))
-  return(inst.mort)
+pmPlot
+#**************Mortality function*******************************
+pmFunc <- function(mu.p.b1,mu.p.b2,mu.p.b3,mu.p.b4,mu.p.b5,T1=16,T2=32,temp){                                 # This function has 4 parameters to be fitted - k1 to k4
+  mu.it <- mu.p.b1 + mu.p.b2*exp(-(mu.p.b3*(temp-T1)))+mu.p.b4*exp(mu.p.b5*(temp-T2))
+  return(mu.it)
 }
-#*******************************************************************
-
-#*************Likelihood function**************************
-nll <- function(log_k1
-                ,log_k2
-                ,log_k3
-                ,log_k4
-                ,dat=cbind.data.frame(inst.mort,phelps.temp)){
-   k1 <- exp(log_k1)                                                       # Parameters to be fitted
-   k2 <- exp(log_k2)
-   k3 <- exp(log_k3)
-   k4 <- exp(log_k4)
-
-   mod.mort <- mort_func(k1=k1,k2=k2,k3=k3,k4=k4,temp=dat$phelps.temp)    # Model output
-   obs.mort <- dat$inst.mort                                              # Observed data
-   ll <- sum(dnorm(mod.mort,mean=obs.mort,log=T))                         # Likelihood assuming normal distribution
-   return(-ll)
-}
-#***********************************************************
-
-#************initial parameters***************************
-init.pars <- c(log_k1=log(24)
-               ,log_k2=log(0.27)
-               ,log_k3=log(0.0002)
-               ,log_k4=log(1))
-#************************************************************
-
-#***********Fitting******************
- objFXN <- function(fit.params
-                    ,dat=cbind.data.frame(inst.mort,phelps.temp)) {
-   parms <- fit.params
-   nll(fit.params[1],fit.params[2],fit.params[3],fit.params[4], dat = dat) ## then call likelihood
- }
- 
- trace <- 3
- 
- optim.vals <- optim(par = init.pars
-                     , objFXN
-                     , dat = cbind.data.frame(inst.mort,phelps.temp)
-                     , control = list(trace = trace, maxit = 200)
-                     , method = "SANN")
- exp(optim.vals$par) #
- 
- 
- optim.vals <- optim(par = optim.vals$par
-                     , objFXN
-                     , dat = cbind.data.frame(inst.mort,phelps.temp)
-                     , control = list(trace = trace, maxit = 200)
-                     , method = "SANN")
- exp(optim.vals$par) #
-
- 
- optim.vals <- optim(par = optim.vals$par
-                     , objFXN
-                     , dat = cbind.data.frame(inst.mort,phelps.temp)
-                     , control = list(trace = trace, maxit = 1000, reltol = 10^-7)
-                     , method = "Nelder-Mead" #
-                     , hessian = T)
- optim.vals # convergence 0 means algorithm converged
-
- MLEfits <- optim.vals$par
- exp(MLEfits)
- pk1 <- exp(MLEfits[1])            # starting params
- pk2 <- exp(MLEfits[2])
- pk3 <- exp(MLEfits[3])
- pk4 <- exp(MLEfits[4])
-#**********************************************************
- 
-#********************Confidence intervals*********************************** 
-fisherInfMatrix <- solve(optim.vals$hessian) ## invert the Hessian, to estimate the covar-var matrix of parameter estimates
-fisherInfMatrix
-
-# Finds the critical z value
-conf.level <- 0.95
-crit <- qnorm((1 + conf.level)/2)
-
-ci <- optim.vals$par[1] + c(-1, 1) * crit * sqrt(abs(fisherInfMatrix[1, 1]))
-exp(ci)
-
-ci <- optim.vals$par[2] + c(-1, 1) * crit * sqrt(abs(fisherInfMatrix[2, 2]))
-exp(ci)
-
-ci <- optim.vals$par[2] + c(-1, 1) * crit * sqrt(abs(fisherInfMatrix[3, 3]))
-exp(ci)
-
-ci <- optim.vals$par[2] + c(-1, 1) * crit * sqrt(abs(fisherInfMatrix[4, 4]))
-exp(ci)
-#********************************************************************
-
-#********************Fitted values as a function of temperature***************
-mort <- mort_func(pk1,pk2,pk3,pk4,seq(16,35,0.1))
-
-modmort <- cbind.data.frame(temp = seq(16,35,0.1), mort = mort)
-#*************************************************************************
-
-
-#***********************Plot*******************************************
-p +
-  geom_line(data=modmort
-            ,mapping=aes(x=temp,y=mort))
-
-
-
-#tiff("Fig_2_pupalmort.tiff", height = 3, width =5, units = 'in', compression="lzw", res=400)
-
-#dev.off()
-#**********************************************************************
+#*********Fit function using nonlinear least squares regression************
+pmFit <- nls(pmi ~ mu.p.b1 + mu.p.b2*exp(-(mu.p.b3*(temp-16)))+mu.p.b4*exp(mu.p.b5*(temp-32))
+             ,data=pmDat
+             ,start=list(mu.p.b1=0.002,mu.p.b2=0.005,mu.p.b3=1.5,mu.p.b4=0.03,mu.p.b5=1.2)
+             ,trace=T)
+#*****************Fitted parameter values**********************************
+pmFitsum <- summary(pmFit)
+pmFitsum
+b1 <- coef(pmFit)[1]
+b2 <- coef(pmFit)[2]
+b3 <- coef(pmFit)[3]
+b4 <- coef(pmFit)[4]
+b5 <- coef(pmFit)[5]
+#**************Predicted mortality***************************************
+pmPred <- pmFunc(mu.p.b1=b1
+                 ,mu.p.b2=b2
+                 ,mu.p.b3=b3
+                 ,mu.p.b4=b4
+                 ,mu.p.b5=b5
+                 ,temp=seq(15,34,0.1))
+pmPred <- cbind.data.frame(temp = seq(15,34,0.1), pmPred = pmPred)
+#***********************Plot********************************************
+pmPlotFit <- pmPlot +
+  geom_line(data=pmPred
+            ,mapping=aes(x=temp,y=pmPred))
+pmPlotFit
+#***********************************************************************
