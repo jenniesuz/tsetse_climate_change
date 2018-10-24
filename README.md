@@ -27,7 +27,7 @@ I suggest you open [this project file](tsetse_climate_change.Rproj) file in [R S
 These files are explained briefly below, the data used in each file are also provided here in .csv files.
 
 ## Analyses
-- **r_1_data_bioassay.R** - reads in tsetse count data and temperature data, calculates monthly average temperatureture
+- **r_1_data_bioassay.R** - reads in tsetse count data and temperature data, calculates monthly average temperature
 - **r_2_subfuncs_adult_mortality.R** - adult mortality as a function of temperature
 - **r_2_subfuncs_larviposition.R** - larviposition as a function of temperature
 - **r_2_subfuncs_pupal_duration.R** - pupal duration as a function of temperature
