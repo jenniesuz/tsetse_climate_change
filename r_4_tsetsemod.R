@@ -311,7 +311,7 @@ temps.count$A <- sim$A+sim$J
 plot.dat <- temps.count[65:length(temps.count$time),] # remove starting runs
 
 #******************************Figure 4**************************
-tiff("Fig_4.tiff", height =4, width = 5, units = 'in', compression="lzw", res=400)
+tiff("Fig_4.tiff", height =4, width = 5, units = 'in', compression="lzw", res=600)
 
 ggplot(plot.dat, aes(x=time,y=count)) +
   geom_point(size=0.4,col="red") +
@@ -320,7 +320,7 @@ ggplot(plot.dat, aes(x=time,y=count)) +
         , x="Date") + 
   scale_x_yearmon(
                limits = as.yearmon(c('1960-02','2017-12'))) +
-  scale_y_continuous(trans='log10',limits=c(0.1, high=200)) +
+  scale_y_continuous(trans='log2',limits=c(0.1, high=130)) +
   theme_set(theme_bw()) +
   theme( panel.border = element_blank()
          ,axis.line = element_line(color = 'black')
@@ -339,7 +339,7 @@ args.list <- c(list(amPlotFit
                   ,lrPlotFit)
                   ,list(ncol=2
                         ,nrow=2
-                        ,bottom=textGrob(bquote("Temperature"~"(?C)")
+                        ,bottom=textGrob(expression("Temperature " ( degree~C))
                         , gp=gpar(fontsize=7))
                   )
 )

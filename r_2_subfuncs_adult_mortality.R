@@ -29,7 +29,7 @@ amFunc <- function(mu.a.a1,mu.a.a2,temp){
   if (temp > 25){                                   # if the temperature is >25
     mu.it <- mu.a.a1*exp(mu.a.a2*(temp-25))         # temperature-dependent mortality
   }else{                         
-    mu.it <- mu.a.a1                                # otherwise no additional temperature-dependent mortality
+    mu.it <- mu.a.a1                                # otherwise no additional mortality
   }
  return(mu.it)
 }

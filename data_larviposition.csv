@@ -1,5 +1,9 @@
-mean_temp,rate
-22.2,0.0958
-24.1,0.104
-26,0.1149
-30,0.1361
+mean_temp,rate,stage
+22.2,0.0958,Subsequent larvipositions
+24.1,0.104,Subsequent larvipositions
+26,0.1149,Subsequent larvipositions
+30,0.1361,Subsequent larvipositions
+22.2,0.0578,First larviposition
+24.1,0.0585,First larviposition
+26,0.0709,First larviposition
+30,0.0714,First larviposition

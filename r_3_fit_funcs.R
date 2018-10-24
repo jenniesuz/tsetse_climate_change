@@ -8,9 +8,9 @@
 #***********Likelihood function**********************************
 nll.pois <- function(parms=tsetse_params(),dat=temps.count){ 
   
- # if (parms$mu.a.a1 > 0.04 | parms$mu.a.a1 < 0.01 ) {                                # penalise model fits where adult mortality at temperatures =< 25 is > 0.03
-#    ll <- -1000000000
-#  }else{                                                      # if mu.a.k1 parameter is < 0.03 proceed to run the model
+  if (parms$mu.a.a1 > 0.04 | parms$mu.a.a1 < 0.01 ) {                                # penalise model fits where adult mortality at temperatures =< 25 is > 0.03
+    ll <- -1000000000
+ }else{                                                      # if mu.a.k1 parameter is < 0.03 proceed to run the model
     
     simulate <- simPop(parms=parms)                           # run the model and save output to object 'simulate'
     
@@ -31,13 +31,13 @@ nll.pois <- function(parms=tsetse_params(),dat=temps.count){
         
       mean.count <- mean(subset)                              # average count for this period
          
-   #    if(mean.count < 50)                                  # if the average is below 50 then penalise model
-  #        { ll <- -10000000
-    #     }else{                                               # otherwise go ahead and calculate log likelihood
+      if(mean.count < 50)                                  # if the average is below 50 then penalise model
+          { ll <- -10000000
+         }else{                                               # otherwise go ahead and calculate log likelihood
 
             ll <- sum(dpois(mean.tsetse,lambda=est,log=T))  # log likelihood assuming data are Poisson distributed
-     #    }
-#  }
+         }
+  }
   return(-ll)
 }
 #**********************************************************
