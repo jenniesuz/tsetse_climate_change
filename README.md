@@ -10,7 +10,7 @@ PLoS Medicine. https://doi.org/10.1371/journal.pmed.1002675.
 
 The code is made available under a <a rel="license" href="http://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International License</a>. You are free to reuse this code provided that you give appropriate credit, provide a link to the license, and indicate if changes were made. You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use. Giving appropriate credit includes citation of the above publication and providing a link to this repository:
 
-<a xmlns:dct="http://purl.org/dc/terms/" href="https://github.com/jenniesuz/tsetse_climate_change" rel="dct:source">https://github.com/jenniesuzL/tsetse_climate_change</a>
+<a xmlns:dct="http://purl.org/dc/terms/" href="https://github.com/jenniesuz/tsetse_climate_change" rel="dct:source">https://github.com/jenniesuz/tsetse_climate_change</a>
 
 <a rel="license" href="http://creativecommons.org/licenses/by/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by/4.0/88x31.png" /></a><br />
 
