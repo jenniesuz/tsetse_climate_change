@@ -1,12 +1,10 @@
-tsetse_climate_change
-=================
+
 
 # <span xmlns:dct="http://purl.org/dc/terms/" property="dct:title">tsetse_climate_change code repository</span>
 
 This repository contains all files needed to run the analyses in:
 
-> <span xmlns:cc="http://creativecommons.org/ns#" property="cc:attributionName">Lord J.S., Hargrove J.W., Torr S.J. and Vale, G.A. (2018). Climate change and African try-
-panosomiasis vector populations in Zimbabwe's Zambezi Valley: a mathematical modelling study.
+> <span xmlns:cc="http://creativecommons.org/ns#" property="cc:attributionName">Lord J.S., Hargrove J.W., Torr S.J. and Vale, G.A. (2018). Climate change and African trypanosomiasis vector populations in Zimbabwe's Zambezi Valley: a mathematical modelling study.
 PLoS Medicine. https://doi.org/10.1371/journal.pmed.1002675.
 
 
